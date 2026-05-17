@@ -1,0 +1,2464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LinguaRead — Language Learning Reader</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap');
+
+  :root {
+    --bg: #0f0e11;
+    --surface: #1a1820;
+    --surface2: #221f2b;
+    --surface3: #2d2938;
+    --border: #332f40;
+    --border2: #3f3a50;
+    --text: #e8e4f0;
+    --text-muted: #8a8299;
+    --text-dim: #5a5470;
+    --accent: #a78bfa;
+    --accent2: #7c3aed;
+    --accent-glow: rgba(167,139,250,0.15);
+    --gold: #f59e0b;
+    --gold-dim: rgba(245,158,11,0.15);
+    --green: #34d399;
+    --green-dim: rgba(52,211,153,0.12);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.12);
+    --blue: #60a5fa;
+    --blue-dim: rgba(96,165,250,0.12);
+
+    /* Word level colors */
+    --lvl0: transparent; /* unknown */
+    --lvl1: rgba(248,113,113,0.25); /* new/red */
+    --lvl2: rgba(251,146,60,0.25); /* learning */
+    --lvl3: rgba(250,204,21,0.25); /* familiar */
+    --lvl4: rgba(52,211,153,0.2); /* known */
+    --lvl5: transparent; /* mastered */
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; overflow: hidden; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'Lora', serif;
+    font-size: 1.2rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, var(--accent), #c4b5fd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+
+  .header-controls {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+  .btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+  .btn.primary { border-color: var(--accent2); background: var(--accent2); color: white; }
+  .btn.primary:hover { background: #6d28d9; border-color: #6d28d9; }
+
+  .toggle-row { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-muted); }
+  .toggle {
+    position: relative; width: 34px; height: 19px;
+    background: var(--surface3); border-radius: 999px;
+    cursor: pointer; transition: background 0.2s;
+    border: 1px solid var(--border);
+  }
+  .toggle.on { background: var(--accent2); border-color: var(--accent); }
+  .toggle::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 13px; height: 13px; border-radius: 50%;
+    background: var(--text-muted); transition: all 0.2s;
+  }
+  .toggle.on::after { left: 17px; background: white; }
+
+  /* ── LAYOUT ── */
+  .main-layout {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* ── READER ── */
+  .reader-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 40px 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    position: relative;
+  }
+
+  .reader-toolbar {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    padding: 10px 14px;
+    background: var(--surface);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    position: sticky; top: 10px; z-index: 50;
+  }
+
+  .reader-toolbar label { font-size: 0.75rem; color: var(--text-dim); font-weight: 500; }
+
+  select {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); border-radius: 6px; padding: 4px 8px;
+    font-size: 0.78rem; font-family: 'Outfit', sans-serif; cursor: pointer;
+  }
+
+  .text-content {
+    font-family: 'Lora', serif;
+    font-size: 1.15rem;
+    line-height: 2.4;
+    color: var(--text);
+    user-select: text;
+    padding-bottom: 40px;
+    max-width: 720px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .text-content p { margin-bottom: 1.2em; }
+
+  /* Words */
+  .word-token {
+    position: relative;
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 1px 2px;
+    transition: background 0.1s;
+    display: inline;
+  }
+  .word-token:hover { background: var(--accent-glow) !important; }
+
+  .word-token.lvl1 { background: var(--lvl1); border-bottom: 2px solid var(--red); }
+  .word-token.lvl2 { background: var(--lvl2); border-bottom: 2px solid var(--gold); }
+  .word-token.lvl3 { background: var(--lvl3); border-bottom: 2px solid #facc15; }
+  .word-token.lvl4 { background: var(--lvl4); border-bottom: 2px solid var(--green); }
+  .word-token.lvl5 { border-bottom: 2px dotted var(--text-dim); }
+
+  /* Furigana-style translation above — uses native <ruby> layout */
+  ruby.furigana-wrap {
+    display: inline ruby;
+    margin: 0 1px;
+    ruby-align: center;
+  }
+  rt.furigana-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.52rem;
+    color: var(--accent);
+    white-space: nowrap;
+    opacity: 0.9;
+    ruby-align: center;
+    margin-bottom: 10px;
+  }
+  /* Phrase ruby: allow the translation to wrap so it doesn't overflow */
+  ruby.phrase-ruby > rt.furigana-text {
+    white-space: normal;
+    text-align: center;
+    max-width: 100%;
+    font-size: 0.5rem;
+  }
+  .furigana-word {
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 1px 2px;
+    transition: background 0.1s;
+  }
+  .furigana-word:hover { background: var(--accent-glow); }
+  .furigana-word.lvl1 { background: var(--lvl1); border-bottom: 2px solid var(--red); }
+  .furigana-word.lvl2 { background: var(--lvl2); border-bottom: 2px solid var(--gold); }
+  .furigana-word.lvl3 { background: var(--lvl3); border-bottom: 2px solid #facc15; }
+  .furigana-word.lvl4 { background: var(--lvl4); border-bottom: 2px solid var(--green); }
+  .furigana-word.lvl5 { border-bottom: 2px dotted var(--text-dim); }
+
+  /* Selection highlight */
+  .word-token.selected, .furigana-word.selected {
+    background: rgba(167,139,250,0.3) !important;
+    outline: 1px solid var(--accent);
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 320px;
+    min-width: 320px;
+    border-left: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: width 0.25s ease, min-width 0.25s ease, opacity 0.2s ease;
+  }
+  .sidebar.collapsed {
+    width: 0;
+    min-width: 0;
+    opacity: 0;
+    pointer-events: none;
+    border-left: none;
+  }
+
+  /* Sidebar toggle — fixed so it's always visible even when scrolled */
+  .sidebar-toggle {
+    position: fixed;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 200;
+    width: 22px;
+    height: 56px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-right: none;
+    border-radius: 8px 0 0 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+    font-size: 0.65rem;
+    transition: color 0.15s, background 0.15s, right 0.25s ease;
+    writing-mode: vertical-rl;
+    user-select: none;
+    box-shadow: -2px 0 8px rgba(0,0,0,0.3);
+  }
+  .sidebar-toggle:hover { color: var(--accent); background: var(--accent-glow); }
+  /* When sidebar is open, shift the toggle left */
+  .sidebar-toggle.sidebar-open { right: 320px; }
+
+  .sidebar-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+  }
+  .stab {
+    flex: 1;
+    padding: 12px 8px;
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+  .stab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .stab:hover { color: var(--text-muted); }
+
+  .sidebar-panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+  .sidebar-panel.active { display: flex; }
+
+  .sidebar-scroll { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+
+  /* Word Detail Panel */
+  .word-detail {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+
+  .word-detail h2 {
+    font-family: 'Lora', serif;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .word-detail .sentence-preview {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    font-style: italic;
+    margin-bottom: 14px;
+    line-height: 1.5;
+    padding: 8px;
+    background: var(--surface3);
+    border-radius: 6px;
+    border-left: 2px solid var(--border2);
+  }
+
+  .level-selector { display: flex; gap: 6px; margin-bottom: 12px; }
+  .lvl-btn {
+    flex: 1; padding: 6px 4px;
+    border-radius: 6px; border: 1px solid var(--border);
+    cursor: pointer; font-size: 0.7rem; font-weight: 600;
+    font-family: 'Outfit', sans-serif;
+    transition: all 0.15s; text-align: center;
+  }
+  .lvl-btn[data-lvl="1"] { color: var(--red); }
+  .lvl-btn[data-lvl="2"] { color: var(--gold); }
+  .lvl-btn[data-lvl="3"] { color: #facc15; }
+  .lvl-btn[data-lvl="4"] { color: var(--green); }
+  .lvl-btn[data-lvl="5"] { color: var(--text-dim); }
+  .lvl-btn.active[data-lvl="1"] { background: var(--red-dim); border-color: var(--red); }
+  .lvl-btn.active[data-lvl="2"] { background: var(--gold-dim); border-color: var(--gold); }
+  .lvl-btn.active[data-lvl="3"] { background: rgba(250,204,21,0.15); border-color: #facc15; }
+  .lvl-btn.active[data-lvl="4"] { background: var(--green-dim); border-color: var(--green); }
+  .lvl-btn.active[data-lvl="5"] { background: var(--surface3); border-color: var(--border2); }
+  .lvl-btn:hover { border-color: currentColor; }
+
+  .translation-area {
+    width: 100%;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    color: var(--text);
+    font-size: 0.88rem;
+    font-family: 'Outfit', sans-serif;
+    resize: vertical;
+    min-height: 70px;
+    outline: none;
+    transition: border-color 0.15s;
+    margin-bottom: 10px;
+  }
+  .translation-area:focus { border-color: var(--accent); }
+  .translation-area::placeholder { color: var(--text-dim); }
+
+  .save-btn {
+    width: 100%;
+    padding: 9px;
+    border-radius: 8px;
+    background: var(--accent2);
+    border: none;
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: 'Outfit', sans-serif;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .save-btn:hover { background: #6d28d9; }
+
+  /* Vocab list */
+  .vocab-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .vocab-item:hover { border-color: var(--accent); background: var(--surface3); }
+  .vocab-item .vi-word { font-family: 'Lora', serif; font-size: 1rem; font-weight: 600; }
+  .vocab-item .vi-trans { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vocab-item .vi-meta { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+
+  .level-badge {
+    padding: 2px 7px; border-radius: 999px;
+    font-size: 0.65rem; font-weight: 700; letter-spacing: 0.05em;
+  }
+  .badge-1 { background: var(--red-dim); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+  .badge-2 { background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(245,158,11,0.3); }
+  .badge-3 { background: rgba(250,204,21,0.15); color: #facc15; border: 1px solid rgba(250,204,21,0.3); }
+  .badge-4 { background: var(--green-dim); color: var(--green); border: 1px solid rgba(52,211,153,0.3); }
+  .badge-5 { background: var(--surface3); color: var(--text-dim); border: 1px solid var(--border); }
+
+  .type-badge {
+    padding: 2px 7px; border-radius: 999px;
+    font-size: 0.65rem; font-weight: 600;
+    background: var(--accent-glow); color: var(--accent);
+    border: 1px solid rgba(167,139,250,0.2);
+  }
+
+  /* Stats */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px;
+    text-align: center;
+  }
+  .stat-card .val { font-size: 1.8rem; font-weight: 700; color: var(--accent); line-height: 1; }
+  .stat-card .lbl { font-size: 0.7rem; color: var(--text-dim); margin-top: 4px; }
+
+  .filter-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .filter-chip {
+    padding: 4px 10px; border-radius: 999px;
+    font-size: 0.72rem; font-weight: 500;
+    border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text-muted);
+    cursor: pointer; transition: all 0.15s;
+  }
+  .filter-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    padding: 40px 20px;
+    line-height: 1.8;
+  }
+  .empty-state .icon { font-size: 2rem; margin-bottom: 8px; }
+
+  /* ── AUDIO PLAYER ── */
+  .audio-player {
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    padding: 14px 20px;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .audio-player.visible { display: flex; }
+
+  .audio-top { display: flex; align-items: center; gap: 12px; }
+
+  .audio-info { flex: 1; min-width: 0; }
+  .audio-title { font-size: 0.82rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .audio-sub { font-size: 0.72rem; color: var(--text-dim); margin-top: 1px; }
+
+  .audio-controls { display: flex; align-items: center; gap: 8px; }
+  .audio-btn {
+    width: 32px; height: 32px;
+    border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text-muted);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; font-size: 0.75rem; flex-shrink: 0;
+  }
+  .audio-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+  .audio-btn.play-btn {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--accent2); border-color: var(--accent2); color: white;
+    font-size: 1rem;
+  }
+  .audio-btn.play-btn:hover { background: #6d28d9; }
+
+  .audio-progress-area { display: flex; align-items: center; gap: 10px; }
+  .time-label { font-size: 0.72rem; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
+
+  .progress-track {
+    flex: 1; height: 5px; background: var(--surface3);
+    border-radius: 999px; cursor: pointer; position: relative;
+    border: 1px solid var(--border);
+  }
+  .progress-fill {
+    height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent));
+    border-radius: 999px; pointer-events: none; position: relative; transition: width 0.1s;
+  }
+  .progress-thumb {
+    position: absolute; right: -5px; top: -4px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: white; box-shadow: 0 0 6px rgba(167,139,250,0.5);
+    pointer-events: none;
+  }
+  /* Bookmark markers on progress */
+  .bm-marker {
+    position: absolute; top: -3px;
+    width: 3px; height: 11px;
+    background: var(--gold);
+    border-radius: 1px;
+    transform: translateX(-50%);
+    cursor: pointer;
+  }
+
+  .bookmarks-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .bm-chip {
+    padding: 3px 8px; border-radius: 6px;
+    font-size: 0.7rem; font-family: 'JetBrains Mono', monospace;
+    background: var(--gold-dim); color: var(--gold);
+    border: 1px solid rgba(245,158,11,0.3);
+    cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .bm-chip:hover { background: rgba(245,158,11,0.25); }
+  .bm-del { color: rgba(245,158,11,0.5); font-size: 0.65rem; cursor: pointer; }
+  .bm-del:hover { color: var(--red); }
+  .bm-label { font-size: 0.7rem; color: var(--text-dim); }
+
+  .audio-upload-area {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin: 16px;
+  }
+  .audio-upload-area:hover { border-color: var(--accent); background: var(--accent-glow); }
+  .audio-upload-area .icon { font-size: 1.5rem; margin-bottom: 6px; }
+  .audio-upload-area p { font-size: 0.82rem; color: var(--text-muted); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent2); }
+
+  /* ── WORD MINI POPUP ── */
+  .word-popup {
+    position: fixed;
+    z-index: 500;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 12px 14px 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.55);
+    min-width: 210px;
+    max-width: 280px;
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    animation: popIn 0.12s ease;
+  }
+  .word-popup.visible { display: flex; }
+  @keyframes popIn {
+    from { opacity: 0; transform: translateY(6px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .wp-word {
+    font-family: 'Lora', serif;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .wp-sentence {
+    font-size: 0.73rem;
+    color: var(--text-dim);
+    font-style: italic;
+    line-height: 1.4;
+    padding: 5px 7px;
+    background: var(--surface2);
+    border-radius: 5px;
+    border-left: 2px solid var(--border2);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .wp-translation {
+    font-size: 0.8rem;
+    color: var(--accent);
+    font-style: italic;
+  }
+  .wp-levels {
+    display: flex;
+    gap: 4px;
+  }
+  .wp-lvl {
+    flex: 1;
+    padding: 5px 2px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    font-size: 0.62rem;
+    font-weight: 700;
+    font-family: 'Outfit', sans-serif;
+    text-align: center;
+    transition: all 0.12s;
+    background: var(--surface2);
+  }
+  .wp-lvl:hover { border-color: currentColor; background: var(--surface3); }
+  .wp-lvl[data-lvl="1"] { color: var(--red); }
+  .wp-lvl[data-lvl="2"] { color: var(--gold); }
+  .wp-lvl[data-lvl="3"] { color: #facc15; }
+  .wp-lvl[data-lvl="4"] { color: var(--green); }
+  .wp-lvl[data-lvl="5"] { color: var(--text-dim); }
+  .wp-lvl.active[data-lvl="1"] { background: var(--red-dim); border-color: var(--red); }
+  .wp-lvl.active[data-lvl="2"] { background: var(--gold-dim); border-color: var(--gold); }
+  .wp-lvl.active[data-lvl="3"] { background: rgba(250,204,21,0.15); border-color: #facc15; }
+  .wp-lvl.active[data-lvl="4"] { background: var(--green-dim); border-color: var(--green); }
+  .wp-lvl.active[data-lvl="5"] { background: var(--surface3); border-color: var(--border2); }
+  .wp-actions {
+    display: flex;
+    gap: 5px;
+    justify-content: flex-end;
+    border-top: 1px solid var(--border);
+    padding-top: 7px;
+    margin-top: 2px;
+  }
+  .wp-action {
+    padding: 4px 9px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-family: 'Outfit', sans-serif;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .wp-action:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+  .wp-action.danger { color: var(--red); }
+  .wp-action.danger:hover { border-color: var(--red); background: var(--red-dim); }
+
+  /* Tooltip / context popup */
+  .ctx-popup {
+    position: fixed;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 10px 14px;
+    z-index: 1000;
+    display: none;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    min-width: 180px;
+    max-width: 260px;
+  }
+  .ctx-popup.visible { display: block; }
+  .ctx-word { font-family: 'Lora', serif; font-size: 1.1rem; font-weight: 600; margin-bottom: 6px; }
+  .ctx-actions { display: flex; flex-wrap: wrap; gap: 5px; }
+  .ctx-action {
+    padding: 4px 9px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text-muted);
+    font-size: 0.72rem; font-family: 'Outfit', sans-serif;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .ctx-action:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+
+  /* Upload text area */
+  .upload-text-area {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    color: var(--text);
+    font-size: 1rem;
+    font-family: 'Lora', serif;
+    width: 100%;
+    min-height: 200px;
+    outline: none;
+    resize: vertical;
+    line-height: 1.7;
+    transition: border-color 0.15s;
+  }
+  .upload-text-area:focus { border-color: var(--accent); }
+
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    display: none; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.visible { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 16px;
+    padding: 28px;
+    max-width: 560px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .modal h2 { font-family: 'Lora', serif; font-size: 1.3rem; color: var(--text); }
+  .modal p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; }
+  .modal-row { display: flex; gap: 10px; justify-content: flex-end; }
+
+  input[type="text"] {
+    width: 100%;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px;
+    color: var(--text); font-size: 0.88rem; font-family: 'Outfit', sans-serif;
+    outline: none; transition: border-color 0.15s;
+  }
+  input[type="text"]:focus { border-color: var(--accent); }
+
+  .range-input {
+    -webkit-appearance: none;
+    width: 80px; height: 4px; border-radius: 999px;
+    background: var(--surface3); outline: none;
+    cursor: pointer;
+  }
+  .range-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 13px; height: 13px; border-radius: 50%;
+    background: var(--accent); cursor: pointer;
+  }
+
+  .hint { font-size: 0.72rem; color: var(--text-dim); }
+  
+  /* Sentence selection highlight */
+  .sentence-token {
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 1px 3px;
+    transition: background 0.12s;
+  }
+  .sentence-token:hover { background: rgba(167,139,250,0.08); }
+  .sentence-token.selected { background: rgba(167,139,250,0.18); outline: 1px solid rgba(167,139,250,0.4); }
+
+  /* level legend */
+  .legend { display: flex; gap: 8px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 0.7rem; color: var(--text-muted); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+  /* Library */
+  .library-item-del {
+    position: absolute; top: 10px; right: 10px;
+    font-size: 0.75rem; color: var(--text-dim); cursor: pointer;
+    padding: 2px 6px; border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--surface3);
+  }
+  .library-item-del:hover { color: var(--red); border-color: var(--red); }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in { animation: fadeIn 0.2s ease; }
+
+  /* ── SETTINGS PANEL ── */
+  .settings-panel {
+    position: fixed;
+    top: 57px;
+    right: 0;
+    width: 280px;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    border-radius: 0 0 0 12px;
+    z-index: 150;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    box-shadow: -6px 6px 24px rgba(0,0,0,0.4);
+    transform: translateX(100%);
+    opacity: 0;
+    transition: transform 0.22s ease, opacity 0.18s ease;
+    pointer-events: none;
+  }
+  .settings-panel.open {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: all;
+  }
+  .settings-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .settings-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .settings-row label {
+    font-size: 0.73rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .settings-row select {
+    width: 100%;
+    padding: 7px 10px;
+    font-size: 0.82rem;
+  }
+  .settings-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 2px 0;
+  }
+  .font-preview {
+    margin-top: 4px;
+    padding: 8px 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* ── TRANSLATION COLUMN ── */
+  .reader-columns {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    gap: 0;
+  }
+
+  .reader-col {
+    flex: 1;
+    overflow-y: auto;
+    padding: 40px 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    position: relative;
+  }
+
+  /* Translation column (right) */
+  .reader-col.col-translation {
+    border-left: 1px solid var(--border);
+    background: rgba(167,139,250,0.03);
+    display: none;
+  }
+  .reader-col.col-translation.visible {
+    display: flex;
+  }
+
+  .translation-col-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    position: sticky;
+    top: 0px;
+    z-index: 50;
+  }
+
+  .translation-col-header span {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .btn-clear-trans {
+    padding: 3px 9px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    font-family: 'Outfit', sans-serif;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-clear-trans:hover { border-color: var(--red); color: var(--red); }
+
+  .translation-text-display {
+    font-family: 'Lora', serif;
+    font-size: 1.15rem;
+    line-height: 2.4;
+    color: var(--text-muted);
+    padding-bottom: 40px;
+    max-width: 720px;
+    margin: 0 auto;
+    width: 100%;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .translation-text-display p { margin-bottom: 1.2em; }
+
+  /* Upload zone */
+  .trans-upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 40px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.18s;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 420px;
+  }
+  .trans-upload-zone:hover, .trans-upload-zone.drag-over {
+    border-color: var(--accent);
+    background: var(--accent-glow);
+  }
+  .trans-upload-zone .icon { font-size: 2rem; margin-bottom: 10px; }
+  .trans-upload-zone h3 {
+    font-family: 'Lora', serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .trans-upload-zone p { font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; }
+  .trans-upload-zone .hint { font-size: 0.72rem; color: var(--text-dim); margin-top: 8px; }
+  .trans-or { margin: 14px 0; font-size: 0.72rem; color: var(--text-dim); }
+  .trans-paste-area {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-size: 0.88rem;
+    font-family: 'Outfit', sans-serif;
+    resize: vertical;
+    min-height: 100px;
+    outline: none;
+    transition: border-color 0.15s;
+    margin-top: 4px;
+  }
+  .trans-paste-area:focus { border-color: var(--accent); }
+  .trans-paste-area::placeholder { color: var(--text-dim); }
+
+  @media (max-width: 900px) {
+    .reader-col { padding: 20px 20px; }
+    .sidebar { width: 280px; min-width: 280px; }
+    .sidebar-toggle.sidebar-open { right: 280px; }
+  }
+  @media (max-width: 680px) {
+    .main-layout { flex-direction: column; height: auto; overflow: visible; }
+    .reader-columns { flex-direction: column; }
+    .reader-col.col-translation { border-left: none; border-top: 1px solid var(--border); }
+    .sidebar { width: 100%; min-width: unset; border-left: none; border-top: 1px solid var(--border); height: 400px; }
+    .reader-col { overflow: visible; }
+    .sidebar-toggle { top: auto; bottom: 80px; transform: none; right: 0 !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">✦ LinguaRead</div>
+  <div class="header-controls">
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--red);opacity:0.7"></div>New</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--gold);opacity:0.7"></div>Learning</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#facc15;opacity:0.7"></div>Familiar</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green);opacity:0.7"></div>Known</div>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle" id="furiganaToggle" onclick="toggleFurigana()"></div>
+      <span>Translations</span>
+    </div>
+    <button class="btn" onclick="openLoadModal()">📄 Load Text</button>
+    <button class="btn" onclick="document.getElementById('audioFileInput').click()">🎵 Load Audio</button>
+    <button class="btn" id="transToggleBtn" onclick="toggleTranslationCol()" title="Show/hide translation column">📖 Translation</button>
+    <button class="btn" id="settingsBtn" onclick="toggleSettings()">⚙ Settings</button>
+    <input type="file" id="audioFileInput" accept="audio/*" style="display:none" onchange="loadAudio(event)">
+  </div>
+</header>
+
+<!-- SETTINGS PANEL -->
+<div class="settings-panel" id="settingsPanel">
+  <div class="settings-title">⚙ Reader Settings</div>
+
+  <div class="settings-row">
+    <label>Font Family</label>
+    <select id="fontSelect" onchange="setFont(this.value)">
+      <option value="'Lora', serif">Lora (Serif)</option>
+      <option value="'Merriweather', serif">Merriweather</option>
+      <option value="'Source Serif 4', serif">Source Serif</option>
+      <option value="'Playfair Display', serif">Playfair Display</option>
+      <option value="'Inter', sans-serif">Inter (Sans)</option>
+    </select>
+  </div>
+
+  <div class="settings-row">
+    <label>Font Size</label>
+    <select id="fontSizeSelect" onchange="setFontSize(this.value)">
+      <option value="14">14px — Compact</option>
+      <option value="16">16px — Small</option>
+      <option value="18" selected>18px — Default</option>
+      <option value="20">20px — Comfortable</option>
+      <option value="22">22px — Large</option>
+      <option value="24">24px — Extra Large</option>
+      <option value="28">28px — Maximum</option>
+    </select>
+  </div>
+
+  <div class="font-preview" id="fontPreview">
+    The quick brown fox jumps over the lazy dog.
+  </div>
+
+  <div class="settings-divider"></div>
+
+  <div class="settings-row">
+    <label>Line Spacing</label>
+    <select id="lineHeightSelect" onchange="setLineHeight(this.value)">
+      <option value="1.8">Tight</option>
+      <option value="2.2">Normal</option>
+      <option value="2.4" selected>Comfortable</option>
+      <option value="2.8">Relaxed</option>
+      <option value="3.2">Spacious</option>
+    </select>
+  </div>
+
+  <div class="settings-row">
+    <label>Text Width</label>
+    <select id="textWidthSelect" onchange="setTextWidth(this.value)">
+      <option value="100%">Full Width</option>
+      <option value="900px">Wide — 900px</option>
+      <option value="720px" selected>Comfortable — 720px</option>
+      <option value="600px">Focused — 600px</option>
+      <option value="480px">Narrow — 480px</option>
+    </select>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main-layout">
+
+  <!-- FIXED SIDEBAR TOGGLE (always visible) -->
+  <div class="sidebar-toggle sidebar-open" id="sidebarToggle" onclick="toggleSidebar()" title="Toggle sidebar">‹</div>
+
+  <!-- READER COLUMNS -->
+  <div class="reader-columns" id="readerColumns">
+
+    <!-- LEFT: ORIGINAL TEXT -->
+    <div class="reader-col col-original" id="readerColOriginal">
+      <div class="text-content" id="textContent" style="font-size:18px">
+        <!-- Tokenized text loads here -->
+      </div>
+    </div>
+
+    <!-- RIGHT: TRANSLATION COLUMN -->
+    <div class="reader-col col-translation" id="readerColTranslation">
+      <div id="transUploadZone">
+        <div class="translation-col-header" style="margin-bottom:16px">
+          <span>📖 Translation / Notes</span>
+        </div>
+        <div class="trans-upload-zone" id="transDropZone"
+          ondragover="transOnDragOver(event)" ondragleave="transOnDragLeave(event)" ondrop="transOnDrop(event)"
+          onclick="document.getElementById('transFileInput').click()">
+          <div class="icon">📄</div>
+          <h3>Upload Translation</h3>
+          <p>Drop a .txt file here, or click to browse</p>
+          <p class="hint">Supports plain text (.txt) files</p>
+          <div class="trans-or">— or paste directly —</div>
+          <textarea class="trans-paste-area" id="transPasteArea"
+            placeholder="Paste your translation / notes / explanation here…"
+            onclick="event.stopPropagation()"
+            oninput="transOnPasteInput(this)"></textarea>
+        </div>
+        <input type="file" id="transFileInput" accept=".txt,text/plain" style="display:none" onchange="transOnFileSelect(event)">
+      </div>
+
+      <div id="transDisplayArea" style="display:none; flex-direction:column; gap:0; flex:1;">
+        <div class="translation-col-header">
+          <span>📖 Translation / Notes</span>
+          <button class="btn-clear-trans" onclick="clearTranslation()">✕ Clear</button>
+        </div>
+        <div class="translation-text-display" id="transTextDisplay"></div>
+      </div>
+    </div>
+
+  </div><!-- end reader-columns -->
+
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-tabs">
+      <div class="stab active" onclick="switchTab('detail')" id="tab-detail">Word</div>
+      <div class="stab" onclick="switchTab('vocab')" id="tab-vocab">Vocab</div>
+      <div class="stab" onclick="switchTab('stats')" id="tab-stats">Stats</div>
+      <div class="stab" onclick="switchTab('library')" id="tab-library">Library</div>
+      <div class="stab" onclick="switchTab('audio')" id="tab-audio">Audio</div>
+    </div>
+
+    <!-- DETAIL PANEL -->
+    <div class="sidebar-panel active" id="panel-detail">
+      <div class="sidebar-scroll">
+        <div id="detailContent">
+          <div class="empty-state">
+            <div class="icon">👆</div>
+            <p>Click any word or sentence to add it to your vocabulary. Right-click for more options.</p>
+            <br>
+            <p class="hint">Tip: Change select mode to capture sentences or drag to select phrases.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VOCAB PANEL -->
+    <div class="sidebar-panel" id="panel-vocab">
+      <div style="padding:12px 16px; border-bottom:1px solid var(--border); display:flex; flex-direction:column; gap:8px;">
+        <input type="text" placeholder="🔍 Search vocabulary…" id="vocabSearch" oninput="renderVocabList()">
+        <div class="filter-row" id="filterRow">
+          <div class="filter-chip active" onclick="setFilter('all')" data-filter="all">All</div>
+          <div class="filter-chip" onclick="setFilter('1')" data-filter="1">New</div>
+          <div class="filter-chip" onclick="setFilter('2')" data-filter="2">Learning</div>
+          <div class="filter-chip" onclick="setFilter('3')" data-filter="3">Familiar</div>
+          <div class="filter-chip" onclick="setFilter('4')" data-filter="4">Known</div>
+          <div class="filter-chip" onclick="setFilter('5')" data-filter="5">Mastered</div>
+          <div class="filter-chip" onclick="setFilter('phrase')" data-filter="phrase">Phrases</div>
+        </div>
+      </div>
+      <div class="sidebar-scroll" id="vocabListContainer">
+        <div class="empty-state"><div class="icon">📚</div><p>No vocabulary yet. Start clicking words!</p></div>
+      </div>
+    </div>
+
+    <!-- STATS PANEL -->
+    <div class="sidebar-panel" id="panel-stats">
+      <div class="sidebar-scroll">
+        <div class="stats-grid" id="statsGrid"></div>
+        <div style="margin-top:16px">
+          <div style="font-size:0.75rem;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Level Distribution</div>
+          <div id="statsBar" style="display:flex;height:12px;border-radius:999px;overflow:hidden;gap:2px;"></div>
+          <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;" id="statsLegend"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIBRARY PANEL -->
+    <div class="sidebar-panel" id="panel-library">
+      <div style="padding:12px 16px; border-bottom:1px solid var(--border); display:flex; gap:8px; align-items:center;">
+        <span style="font-size:0.75rem;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;flex:1">Saved Lessons</span>
+        <button class="btn" onclick="openSaveLessonModal()" style="padding:4px 10px;font-size:0.72rem;">💾 Save Current</button>
+      </div>
+      <div class="sidebar-scroll" id="libraryList">
+        <div class="empty-state"><div class="icon">📖</div><p>No saved lessons yet.<br>Load a text and click "Save Current".</p></div>
+      </div>
+    </div>
+
+    <!-- AUDIO PANEL -->
+    <div class="sidebar-panel" id="panel-audio">
+      <div class="sidebar-scroll">
+        <div id="audioUploadPrompt">
+          <div class="audio-upload-area" onclick="document.getElementById('audioFileInput').click()">
+            <div class="icon">🎵</div>
+            <p>Click to upload audio file</p>
+            <p class="hint" style="margin-top:4px">MP3, WAV, OGG, M4A supported</p>
+          </div>
+        </div>
+        <div id="audioInfo" style="display:none;padding:8px">
+          <div class="word-detail">
+            <div style="font-size:0.75rem;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">Now Playing</div>
+            <div id="audioFileName" style="font-family:'Lora',serif;font-size:1rem;font-weight:600;margin-bottom:4px"></div>
+            <div style="font-size:0.75rem;color:var(--text-dim)" id="audioDuration">–</div>
+          </div>
+          <div style="margin-top:12px">
+            <div style="font-size:0.75rem;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">Bookmarks</div>
+            <div class="bookmarks-row" id="bookmarksList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AUDIO PLAYER BAR -->
+<div class="audio-player" id="audioPlayer">
+  <div class="audio-top">
+    <div class="audio-info">
+      <div class="audio-title" id="playerTitle">No audio loaded</div>
+      <div class="audio-sub" id="playerSub">Upload audio to start</div>
+    </div>
+    <div class="audio-controls">
+      <div class="audio-btn" onclick="skipAudio(-5)" title="Back 5s">⟪ 5s</div>
+      <div class="audio-btn play-btn" id="playBtn" onclick="togglePlay()">▶</div>
+      <div class="audio-btn" onclick="skipAudio(5)" title="Forward 5s">5s ⟫</div>
+      <div class="audio-btn" onclick="addBookmark()" title="Add bookmark">🔖</div>
+      <div class="audio-btn" onclick="setPlaybackRate()" title="Playback speed" id="speedBtn" style="font-size:0.65rem;font-family:'JetBrains Mono',monospace;width:38px">1.0×</div>
+    </div>
+  </div>
+  <div class="audio-progress-area">
+    <span class="time-label" id="timeLabel">0:00</span>
+    <div class="progress-track" id="progressTrack" onclick="seekAudio(event)" onmousemove="previewSeek(event)" onmouseleave="hidePreview()">
+      <div class="progress-fill" id="progressFill" style="width:0%">
+        <div class="progress-thumb"></div>
+      </div>
+      <div id="bookmarkMarkers"></div>
+      <div id="seekPreview" style="position:absolute;top:-22px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:0.68rem;font-family:'JetBrains Mono',monospace;color:var(--text-muted);display:none;pointer-events:none;transform:translateX(-50%)"></div>
+    </div>
+    <span class="time-label" id="durationLabel">0:00</span>
+  </div>
+</div>
+
+<!-- WORD MINI POPUP -->
+<div class="word-popup" id="wordPopup">
+  <div class="wp-word" id="wpWord"></div>
+  <div class="wp-sentence" id="wpSentence" style="display:none"></div>
+  <div class="wp-translation" id="wpTranslation" style="display:none"></div>
+  <div class="wp-levels" id="wpLevels"></div>
+  <div class="wp-actions">
+    <div class="wp-action danger" id="wpRemove" style="display:none" onclick="wpRemoveWord()">🗑 Remove</div>
+    <div class="wp-action" onclick="wpOpenSidebar()">Open in sidebar ›</div>
+  </div>
+</div>
+
+<!-- CONTEXT POPUP -->
+<div class="ctx-popup" id="ctxPopup">
+  <div class="ctx-word" id="ctxWord"></div>
+  <div class="ctx-actions" id="ctxActions"></div>
+</div>
+
+<!-- SAVE LESSON MODAL -->
+<div class="modal-overlay" id="saveLessonModal">
+  <div class="modal fade-in">
+    <h2>💾 Save Lesson</h2>
+    <p>Give this lesson a name to save it to your library.</p>
+    <input type="text" id="lessonTitleInput" placeholder="e.g. French Revolution – Episode 3" maxlength="80">
+    <div class="modal-row">
+      <button class="btn" onclick="closeSaveLessonModal()">Cancel</button>
+      <button class="btn primary" onclick="saveLesson()">Save to Library ✦</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOAD TEXT MODAL -->
+<div class="modal-overlay" id="loadModal">
+  <div class="modal fade-in">
+    <h2>📄 Load Text</h2>
+    <p>Paste or type your reading text below. Words will be tokenized automatically for vocabulary tracking.</p>
+    <textarea class="upload-text-area" id="inputTextArea" placeholder="Paste your text here…"></textarea>
+    <div class="modal-row">
+      <button class="btn" onclick="closeLoadModal()">Cancel</button>
+      <button class="btn primary" onclick="loadText()">Load Text ✦</button>
+    </div>
+  </div>
+</div>
+
+<audio id="audioEl" style="display:none"></audio>
+
+<script>
+// ── DB ──
+let db;
+const DB_NAME = 'linguaread', DB_VER = 2;
+
+function initDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('vocab')) {
+        const s = d.createObjectStore('vocab', { keyPath: 'text' });
+        s.createIndex('level', 'level', { unique: false });
+        s.createIndex('type', 'type', { unique: false });
+      }
+      if (!d.objectStoreNames.contains('lessons')) {
+        const ls = d.createObjectStore('lessons', { keyPath: 'id', autoIncrement: true });
+        ls.createIndex('savedAt', 'savedAt', { unique: false });
+      }
+    };
+    req.onsuccess = e => { db = e.target.result; res(); };
+    req.onerror = rej;
+  });
+}
+
+function dbPut(item) {
+  return new Promise((res, rej) => {
+    try {
+      const tx = db.transaction('vocab', 'readwrite');
+      const req = tx.objectStore('vocab').put(item);
+      req.onsuccess = () => {};
+      req.onerror = e => { e.stopPropagation(); rej(req.error); };
+      tx.oncomplete = () => res(item);
+      tx.onerror = () => rej(tx.error);
+      tx.onabort = () => rej(tx.error);
+    } catch(e) { rej(e); }
+  });
+}
+
+function dbGet(key) {
+  return new Promise((res, rej) => {
+    try {
+      const tx = db.transaction('vocab', 'readonly');
+      const req = tx.objectStore('vocab').get(key);
+      req.onsuccess = () => res(req.result);
+      req.onerror = e => { e.stopPropagation(); rej(req.error); };
+      tx.onerror = () => rej(tx.error);
+    } catch(e) { rej(e); }
+  });
+}
+
+function dbGetAll() {
+  return new Promise((res, rej) => {
+    try {
+      const tx = db.transaction('vocab', 'readonly');
+      const req = tx.objectStore('vocab').getAll();
+      req.onsuccess = () => res(req.result);
+      req.onerror = e => { e.stopPropagation(); rej(req.error); };
+      tx.onerror = () => rej(tx.error);
+    } catch(e) { rej(e); }
+  });
+}
+
+function dbDelete(key) {
+  return new Promise((res, rej) => {
+    try {
+      const tx = db.transaction('vocab', 'readwrite');
+      const req = tx.objectStore('vocab').delete(key);
+      req.onsuccess = () => {};
+      req.onerror = e => { e.stopPropagation(); rej(req.error); };
+      tx.oncomplete = () => res();
+      tx.onerror = () => rej(tx.error);
+      tx.onabort = () => rej(tx.error);
+    } catch(e) { rej(e); }
+  });
+}
+
+function dbPutLesson(item) {
+  return new Promise((res, rej) => {
+    try {
+      const tx = db.transaction('lessons', 'readwrite');
+      const req = tx.objectStore('lessons').put(item);
+      let newId;
+      req.onsuccess = () => { newId = req.result; };
+      req.onerror = e => { e.stopPropagation(); rej(req.error); };
+      tx.oncomplete = () => res(newId);
+      tx.onerror = () => rej(tx.error);
+      tx.onabort = () => rej(tx.error);
+    } catch(e) { rej(e); }
+  });
+}
+
+function dbGetAllLessons() {
+  return new Promise((res, rej) => {
+    try {
+      const tx = db.transaction('lessons', 'readonly');
+      const req = tx.objectStore('lessons').getAll();
+      req.onsuccess = () => res(req.result);
+      req.onerror = e => { e.stopPropagation(); rej(req.error); };
+      tx.onerror = () => rej(tx.error);
+    } catch(e) { rej(e); }
+  });
+}
+
+function dbDeleteLesson(id) {
+  return new Promise((res, rej) => {
+    try {
+      const tx = db.transaction('lessons', 'readwrite');
+      const req = tx.objectStore('lessons').delete(id);
+      req.onsuccess = () => {};
+      req.onerror = e => { e.stopPropagation(); rej(req.error); };
+      tx.oncomplete = () => res();
+      tx.onerror = () => rej(tx.error);
+      tx.onabort = () => rej(tx.error);
+    } catch(e) { rej(e); }
+  });
+}
+
+// ── STATE ──
+let vocabMap = {}; // text -> {text, level, translation, type, addedAt, sentence}
+let furiganaOn = false;
+let selectMode = 'word';
+let showingAll = false;
+let selectedTokens = new Set();
+let activeFilter = 'all';
+let bookmarks = []; // [{time, label}]
+let playbackRates = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+let rateIdx = 2;
+
+// ── INIT ──
+async function init() {
+  await initDB();
+  const all = await dbGetAll();
+  all.forEach(v => vocabMap[v.text.toLowerCase()] = v);
+
+  // Sidebar starts collapsed
+  const sidebar = document.getElementById('sidebar');
+  const toggle = document.getElementById('sidebarToggle');
+  sidebar.classList.add('collapsed');
+  toggle.classList.remove('sidebar-open');
+  toggle.textContent = '‹';
+  toggle.title = 'Show sidebar';
+
+  // Restore saved settings
+  restoreSettings();
+
+  // Load last lesson, fallback to sample text
+  const lessons = await dbGetAllLessons();
+  if (lessons.length) {
+    lessons.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+    const last = lessons[0];
+    renderText(last.text);
+    if (last.translationText && last.translationText.trim()) {
+      loadTranslationText(last.translationText);
+    }
+  } else {
+    renderText(`Welcome to LinguaRead! Click any word to track it.
+
+This is a sample text to get you started. Click on any word below to open the vocabulary popup. Use the colored buttons to mark words as New, Learning, Familiar, Known, or Mastered.
+
+The quick brown fox jumps over the lazy dog. She sells seashells by the seashore. How much wood would a woodchuck chuck if a woodchuck could chuck wood?
+
+Load your own text by clicking "Load Text" in the header. Save your lessons to the library for later review.`);
+  }
+
+  renderVocabList();
+  renderStats();
+}
+
+// ── TEXT RENDERING ──
+// ── INTERACTIONS ──
+let wpCurrentWord = null, wpCurrentRaw = null, wpCurrentSentence = null;
+
+// Drag-to-select: highlight multiple words → open phrase detail (same as single-word flow)
+document.addEventListener('mouseup', () => {
+  const selection = window.getSelection();
+  const text = selection.toString().trim();
+  if (!text || !text.includes(' ')) return;
+
+  // Only trigger when the selection is inside the text content area
+  const anchor = selection.anchorNode;
+  const textContent = document.getElementById('textContent');
+  if (!textContent || !textContent.contains(anchor)) return;
+
+  // Don't fire if user is typing in an input or textarea
+  if (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT') return;
+
+  // Open sidebar if collapsed
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar && sidebar.classList.contains('collapsed')) toggleSidebar();
+
+  showSentenceDetail(text);
+  selection.removeAllRanges();
+});
+
+function handleWordClick(e) {
+  if (selectMode !== 'word') return;
+  e.stopPropagation();
+  hideContextPopup();
+
+  const word = e.target.dataset.word;
+  const raw = e.target.dataset.raw;
+  const sentence = e.target.closest('.sentence-token')?.dataset.sentence || '';
+
+  // Toggle selection highlight
+  document.querySelectorAll('.selected').forEach(el => {
+    if (el !== e.target) el.classList.remove('selected');
+  });
+  e.target.classList.toggle('selected');
+
+  showWordPopup(e, word, raw, sentence);
+}
+
+function handleSentenceClick(e) {
+  if (selectMode !== 'sentence') return;
+  if (e.target.classList.contains('word-token') || e.target.classList.contains('furigana-word')) return;
+
+  const sentence = e.currentTarget.dataset.sentence;
+  if (!sentence) return;
+
+  e.currentTarget.classList.toggle('selected');
+  if (e.currentTarget.classList.contains('selected')) {
+    selectedTokens.add('__s__' + sentence);
+    showSentenceDetail(sentence);
+  } else {
+    selectedTokens.delete('__s__' + sentence);
+  }
+}
+
+function handleContextMenu(e) {
+  e.preventDefault();
+  const word = e.target.dataset.word;
+  const raw = e.target.dataset.raw;
+  const sentence = e.target.closest('.sentence-token')?.dataset.sentence || '';
+
+  const popup = document.getElementById('ctxPopup');
+  document.getElementById('ctxWord').textContent = raw;
+
+  const actions = document.getElementById('ctxActions');
+  actions.innerHTML = '';
+
+  const levels = [
+    { label: '🔴 New', lvl: 1 },
+    { label: '🟡 Learning', lvl: 2 },
+    { label: '🟠 Familiar', lvl: 3 },
+    { label: '🟢 Known', lvl: 4 },
+    { label: '✓ Mastered', lvl: 5 },
+  ];
+
+  levels.forEach(({ label, lvl }) => {
+    const btn = document.createElement('div');
+    btn.className = 'ctx-action';
+    btn.textContent = label;
+    btn.onclick = () => {
+      quickSetLevel(word, raw, sentence, lvl);
+      hideContextPopup();
+    };
+    actions.appendChild(btn);
+  });
+
+  const del = document.createElement('div');
+  del.className = 'ctx-action';
+  del.textContent = '🗑 Remove';
+  del.style.color = 'var(--red)';
+  del.onclick = () => { removeVocab(word); hideContextPopup(); };
+  actions.appendChild(del);
+
+  popup.style.left = Math.min(e.clientX, window.innerWidth - 220) + 'px';
+  popup.style.top = Math.min(e.clientY, window.innerHeight - 200) + 'px';
+  popup.classList.add('visible');
+}
+
+function hideContextPopup() {
+  document.getElementById('ctxPopup').classList.remove('visible');
+}
+
+// ── WORD MINI POPUP ──
+function showWordPopup(e, word, raw, sentence) {
+  wpCurrentWord = word;
+  wpCurrentRaw = raw;
+  wpCurrentSentence = sentence;
+
+  const vocab = vocabMap[word];
+  const popup = document.getElementById('wordPopup');
+
+  document.getElementById('wpWord').textContent = raw;
+
+  const sentEl = document.getElementById('wpSentence');
+  if (sentence) { sentEl.textContent = '"' + sentence.trim() + '"'; sentEl.style.display = ''; }
+  else sentEl.style.display = 'none';
+
+  const transEl = document.getElementById('wpTranslation');
+  if (vocab?.translation) { transEl.textContent = vocab.translation; transEl.style.display = ''; }
+  else transEl.style.display = 'none';
+
+  const removeEl = document.getElementById('wpRemove');
+  removeEl.style.display = vocab ? '' : 'none';
+
+  // Build level buttons
+  const levelsEl = document.getElementById('wpLevels');
+  const labels = ['', 'New', 'Lrn', 'Fam', 'Knw', 'Mst'];
+  levelsEl.innerHTML = labels.slice(1).map((lbl, i) => {
+    const lvl = i + 1;
+    const isActive = vocab?.level == lvl;
+    return `<div class="wp-lvl${isActive ? ' active' : ''}" data-lvl="${lvl}" onclick="wpSetLevel(${lvl})">${lbl}</div>`;
+  }).join('');
+
+  // Position popup near click, keep inside viewport
+  popup.style.display = 'flex';
+  popup.classList.add('visible');
+  const pw = popup.offsetWidth || 240;
+  const ph = popup.offsetHeight || 180;
+  let x = e.clientX + 10;
+  let y = e.clientY + 10;
+  if (x + pw > window.innerWidth - 10) x = e.clientX - pw - 10;
+  if (y + ph > window.innerHeight - 10) y = e.clientY - ph - 10;
+  popup.style.left = x + 'px';
+  popup.style.top = y + 'px';
+}
+
+function hideWordPopup() {
+  const popup = document.getElementById('wordPopup');
+  popup.classList.remove('visible');
+  popup.style.display = 'none';
+}
+
+async function wpSetLevel(lvl) {
+  const word = wpCurrentWord;
+  if (!word) return;
+  const existing = vocabMap[word] || { text: word, type: 'word', addedAt: Date.now(), translation: '', sentence: wpCurrentSentence };
+  existing.level = lvl;
+  vocabMap[word] = existing;
+  // Update UI immediately, then persist
+  refreshTokens();
+  renderVocabList();
+  renderStats();
+  document.querySelectorAll('.wp-lvl').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.lvl) === lvl);
+  });
+  document.getElementById('wpRemove').style.display = '';
+  try { await dbPut({ ...existing }); } catch(e) { console.warn('DB save failed:', e); }
+}
+
+async function wpRemoveWord() {
+  const word = wpCurrentWord;
+  if (!word) return;
+  delete vocabMap[word];
+  await dbDelete(word);
+  refreshTokens();
+  renderVocabList();
+  renderStats();
+  hideWordPopup();
+}
+
+function wpOpenSidebar() {
+  // Make sure sidebar is open
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar.classList.contains('collapsed')) toggleSidebar();
+  showWordDetail(wpCurrentWord, wpCurrentRaw, wpCurrentSentence);
+  hideWordPopup();
+}
+
+// Close popup on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('#wordPopup') && !e.target.closest('.word-token') && !e.target.closest('.furigana-word')) {
+    hideWordPopup();
+  }
+  if (!e.target.closest('#ctxPopup')) hideContextPopup();
+});
+
+// ── SIDEBAR TOGGLE ──
+let sidebarVisible = false; // hidden by default
+function toggleSidebar() {
+  sidebarVisible = !sidebarVisible;
+  const sidebar = document.getElementById('sidebar');
+  const toggle = document.getElementById('sidebarToggle');
+  sidebar.classList.toggle('collapsed', !sidebarVisible);
+  toggle.classList.toggle('sidebar-open', sidebarVisible);
+  toggle.textContent = sidebarVisible ? '›' : '‹';
+  toggle.title = sidebarVisible ? 'Hide sidebar' : 'Show sidebar';
+}
+
+// ── TRANSLATION COLUMN ──
+let translationColVisible = false;
+
+function toggleTranslationCol() {
+  translationColVisible = !translationColVisible;
+  const col = document.getElementById('readerColTranslation');
+  const btn = document.getElementById('transToggleBtn');
+  col.classList.toggle('visible', translationColVisible);
+  btn.classList.toggle('active', translationColVisible);
+  btn.textContent = translationColVisible ? '📖 Hide Translation' : '📖 Translation';
+}
+
+function showTranslationCol() {
+  if (!translationColVisible) toggleTranslationCol();
+}
+
+function transOnFileSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => loadTranslationText(ev.target.result);
+  reader.readAsText(file, 'UTF-8');
+  e.target.value = '';
+}
+
+function transOnDragOver(e) {
+  e.preventDefault();
+  document.getElementById('transDropZone').classList.add('drag-over');
+}
+function transOnDragLeave(e) {
+  document.getElementById('transDropZone').classList.remove('drag-over');
+}
+function transOnDrop(e) {
+  e.preventDefault();
+  document.getElementById('transDropZone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => loadTranslationText(ev.target.result);
+  reader.readAsText(file, 'UTF-8');
+}
+
+function transOnPasteInput(textarea) {
+  if (textarea.value.trim().length > 10) {
+    loadTranslationText(textarea.value);
+  }
+}
+
+function loadTranslationText(text) {
+  const display = document.getElementById('transTextDisplay');
+  const uploadZone = document.getElementById('transUploadZone');
+  const displayArea = document.getElementById('transDisplayArea');
+
+  // Sync font/size from reader
+  const tc = document.getElementById('textContent');
+  display.style.fontFamily = tc.style.fontFamily || getComputedStyle(tc).fontFamily;
+  display.style.fontSize = tc.style.fontSize || getComputedStyle(tc).fontSize;
+  display.style.lineHeight = tc.style.lineHeight || getComputedStyle(tc).lineHeight;
+
+  // Render: split on blank lines -> paragraphs, newlines within -> <br>
+  const paragraphs = text.trim().split(/\n\n+/);
+  display.innerHTML = paragraphs.map(function(p) {
+    var safe = p.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return '<p>' + safe.replace(/\n/g, '<br>') + '</p>';
+  }).join('');
+
+  uploadZone.style.display = 'none';
+  displayArea.style.display = 'flex';
+  showTranslationCol();
+}
+
+function clearTranslation() {
+  document.getElementById('transTextDisplay').innerHTML = '';
+  document.getElementById('transUploadZone').style.display = 'block';
+  document.getElementById('transDisplayArea').style.display = 'none';
+  document.getElementById('transPasteArea').value = '';
+  // Keep column visible so user can upload again
+}
+
+// Keep translation font in sync when settings change
+function syncTranslationFont() {
+  const tc = document.getElementById('textContent');
+  const display = document.getElementById('transTextDisplay');
+  if (display && tc && document.getElementById('transDisplayArea').style.display !== 'none') {
+    display.style.fontFamily = tc.style.fontFamily || getComputedStyle(tc).fontFamily;
+    display.style.fontSize = tc.style.fontSize || getComputedStyle(tc).fontSize;
+    display.style.lineHeight = tc.style.lineHeight || getComputedStyle(tc).lineHeight;
+  }
+}
+
+async function quickSetLevel(word, raw, sentence, lvl) {
+  const existing = vocabMap[word] || { type: 'word', addedAt: Date.now(), translation: '' };
+  const item = { ...existing, text: word, level: lvl, sentence };
+  vocabMap[word] = item;
+  refreshTokens();
+  renderVocabList();
+  renderStats();
+  try { await dbPut(item); } catch(e) { console.warn('DB save failed:', e); }
+}
+
+async function removeVocab(word) {
+  delete vocabMap[word];
+  await dbDelete(word);
+  refreshTokens();
+  renderVocabList();
+  renderStats();
+}
+
+// ── DETAIL PANELS ──
+function showWordDetail(word, raw, sentence) {
+  switchTab('detail');
+  const vocab = vocabMap[word] || { text: word, level: 1, translation: '', type: 'word', sentence };
+  const lvlLabels = ['', 'New', 'Learning', 'Familiar', 'Known', 'Mastered'];
+
+  let html = `<div class="word-detail fade-in">
+    <h2>${raw}</h2>
+    ${sentence ? `<div class="sentence-preview">"${sentence.trim()}"</div>` : ''}
+    <div style="font-size:0.75rem;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">Level</div>
+    <div class="level-selector">
+      ${[1,2,3,4,5].map(l => `<div class="lvl-btn${vocab.level == l ? ' active' : ''}" data-lvl="${l}" onclick="setLevel('${word}','${raw.replace(/'/g,"\\'")}','${sentence.replace(/'/g,"\\'")}',${l})">${lvlLabels[l]}</div>`).join('')}
+    </div>
+    <div style="font-size:0.75rem;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Translation / Notes</div>
+    <textarea class="translation-area" id="transInput" placeholder="Add translation or notes…">${vocab.translation || ''}</textarea>
+    <button class="save-btn" onclick="saveWord('${word}','${raw.replace(/'/g,"\\'")}','${sentence.replace(/'/g,"\\'")}')">Save Word</button>
+    ${vocab.addedAt ? `<div class="hint" style="margin-top:8px;text-align:center">Added ${new Date(vocab.addedAt).toLocaleDateString()}</div>` : ''}
+  </div>`;
+
+  document.getElementById('detailContent').innerHTML = html;
+}
+
+function showSentenceDetail(sentence) {
+  switchTab('detail');
+  const key = sentence.trim().substring(0, 60).toLowerCase();
+  const vocab = vocabMap[key] || { text: key, level: 1, translation: '', type: 'phrase', sentence, addedAt: Date.now() };
+
+  let html = `<div class="word-detail fade-in">
+    <div style="font-size:0.75rem;color:var(--accent);font-weight:600;margin-bottom:8px">PHRASE SELECTED</div>
+    <div style="font-family:'Lora',serif;font-size:0.95rem;line-height:1.6;color:var(--text);margin-bottom:14px">"${sentence.trim()}"</div>
+    <div style="font-size:0.75rem;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">Level</div>
+    <div class="level-selector">
+      ${[1,2,3,4,5].map(l => `<div class="lvl-btn${vocab.level == l ? ' active' : ''}" data-lvl="${l}" onclick="setSentLevel('${key.replace(/'/g,"\\'")}','${sentence.replace(/'/g,"\\'")}',${l})">${['','New','Learning','Familiar','Known','Mastered'][l]}</div>`).join('')}
+    </div>
+    <div style="font-size:0.75rem;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Translation / Notes</div>
+    <textarea class="translation-area" id="transInput" placeholder="Add translation…">${vocab.translation || ''}</textarea>
+    <button class="save-btn" onclick="saveSentence('${key.replace(/'/g,"\\'")}','${sentence.replace(/'/g,"\\'")}')">Save Phrase</button>
+  </div>`;
+  document.getElementById('detailContent').innerHTML = html;
+}
+
+async function setLevel(word, raw, sentence, lvl) {
+  document.querySelectorAll('.lvl-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.lvl-btn[data-lvl="${lvl}"]`)?.classList.add('active');
+  const existing = vocabMap[word] || { type: 'word', addedAt: Date.now(), translation: '' };
+  const item = { ...existing, text: word, level: lvl, sentence };
+  vocabMap[word] = item;
+  refreshTokens();
+  renderVocabList();
+  renderStats();
+  try { await dbPut(item); } catch(e) { console.warn('DB save failed:', e); }
+}
+
+async function setSentLevel(key, sentence, lvl) {
+  document.querySelectorAll('.lvl-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.lvl-btn[data-lvl="${lvl}"]`)?.classList.add('active');
+  const existing = vocabMap[key] || { text: key, type: 'phrase', addedAt: Date.now(), translation: '', sentence };
+  existing.level = lvl;
+  vocabMap[key] = existing;
+  await dbPut(existing);
+}
+
+async function saveWord(word, raw, sentence) {
+  const trans = document.getElementById('transInput')?.value || '';
+  const lvlBtn = document.querySelector('.lvl-btn.active');
+  const lvl = lvlBtn ? parseInt(lvlBtn.dataset.lvl) : 1;
+  const existing = vocabMap[word] || { type: 'word', addedAt: Date.now() };
+  const item = { ...existing, text: word, level: lvl, translation: trans, sentence };
+  vocabMap[word] = item;
+  refreshTokens();
+  renderVocabList();
+  renderStats();
+  showSaveConfirm();
+  try { await dbPut(item); } catch(e) { console.warn('DB save failed:', e); }
+}
+
+async function saveSentence(key, sentence) {
+  const trans = document.getElementById('transInput')?.value || '';
+  const lvlBtn = document.querySelector('.lvl-btn.active');
+  const lvl = lvlBtn ? parseInt(lvlBtn.dataset.lvl) : 1;
+  const existing = vocabMap[key] || { type: 'phrase', addedAt: Date.now() };
+  const item = { ...existing, text: key, level: lvl, translation: trans, sentence };
+  vocabMap[key] = item;
+  await dbPut(item);
+  if (currentRawText) renderText(currentRawText); // re-render to show phrase highlight
+  renderVocabList();
+  renderStats();
+  showSaveConfirm();
+}
+
+function showSaveConfirm() {
+  const btn = document.querySelector('.save-btn');
+  if (!btn) return;
+  const orig = btn.textContent;
+  btn.textContent = '✓ Saved!';
+  btn.style.background = 'var(--green)';
+  setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 1200);
+}
+
+// ── REFRESH TOKENS ──
+function refreshTokens() {
+  // Update classes on word tokens without full re-render
+  document.querySelectorAll('.word-token, .furigana-word').forEach(el => {
+    const word = el.dataset.word;
+    if (!word) return;
+    const vocab = vocabMap[word];
+    // Remove level classes
+    el.className = el.className.replace(/\blvl\d\b/g, '').trim();
+    if (vocab) el.classList.add('lvl' + vocab.level);
+
+    // Update furigana if on
+    if (furiganaOn && el.classList.contains('furigana-word')) {
+      const wrap = el.closest('.furigana-wrap');
+      if (wrap) {
+        const furi = wrap.querySelector('.furigana-text');
+        if (furi) furi.textContent = vocab?.translation || '';
+      }
+    }
+  });
+
+  // If furigana state changes, need full re-render for proper structure
+}
+
+// ── FURIGANA ──
+function toggleFurigana() {
+  furiganaOn = !furiganaOn;
+  document.getElementById('furiganaToggle').classList.toggle('on', furiganaOn);
+  // Re-render text for furigana structure
+  const content = getCurrentRawText();
+  if (content) renderText(content);
+}
+
+let currentRawText = '';
+function renderText(raw) {
+  currentRawText = raw;
+  const container = document.getElementById('textContent');
+  container.innerHTML = '';
+  const paragraphs = raw.split(/\n\n+/);
+  paragraphs.forEach(para => {
+    if (!para.trim()) return;
+    const p = document.createElement('p');
+    buildParagraph(para, p);
+    container.appendChild(p);
+  });
+}
+
+function getCurrentRawText() { return currentRawText; }
+
+function buildParagraph(para, p) {
+  // Collect saved phrases (multi-word entries) sorted longest-first for greedy matching
+  const savedPhrases = Object.values(vocabMap)
+    .filter(v => v.type === 'phrase' && v.text.includes(' '))
+    .sort((a, b) => b.text.length - a.text.length);
+
+  // Split into sentences smartly
+  const sentParts = para.split(/(?<=[.!?])\s+(?=[A-ZÀ-Ÿ])/);
+
+  sentParts.forEach((sentence, si) => {
+    const sWrap = document.createElement('span');
+    sWrap.className = 'sentence-token';
+    sWrap.dataset.sentence = sentence.trim();
+    sWrap.dataset.si = si;
+    if (si > 0) p.appendChild(document.createTextNode(' '));
+
+    // Build a list of segments: {text, phraseVocab|null}
+    // Start with the whole sentence as one segment, then split out matching phrases
+    let segments = [{ text: sentence, phrase: null }];
+
+    for (const vocab of savedPhrases) {
+      const phraseText = vocab.text; // e.g. "Beaucoup de"
+      const newSegments = [];
+      for (const seg of segments) {
+        if (seg.phrase) { newSegments.push(seg); continue; } // already matched
+        // Case-insensitive search
+        const idx = seg.text.toLowerCase().indexOf(phraseText.toLowerCase());
+        if (idx === -1) { newSegments.push(seg); continue; }
+        if (idx > 0) newSegments.push({ text: seg.text.slice(0, idx), phrase: null });
+        newSegments.push({ text: seg.text.slice(idx, idx + phraseText.length), phrase: vocab });
+        const after = seg.text.slice(idx + phraseText.length);
+        if (after) newSegments.push({ text: after, phrase: null });
+      }
+      segments = newSegments;
+    }
+
+    // Render each segment
+    segments.forEach(seg => {
+      if (seg.phrase) {
+        const lvl = seg.phrase.level || 1;
+        const phraseTrans = seg.phrase.translation || '';
+        const clickHandler = (e) => {
+          e.stopPropagation();
+          const sidebar = document.getElementById('sidebar');
+          if (sidebar && sidebar.classList.contains('collapsed')) toggleSidebar();
+          showSentenceDetail(seg.text);
+        };
+
+        if (furiganaOn && phraseTrans) {
+          // Show phrase translation above the whole phrase using <ruby>
+          const rubyEl = document.createElement('ruby');
+          rubyEl.className = 'furigana-wrap phrase-ruby';
+          const phraseSpan = document.createElement('span');
+          phraseSpan.className = `furigana-word lvl${lvl}`;
+          phraseSpan.style.borderRadius = '4px';
+          phraseSpan.style.cursor = 'pointer';
+          phraseSpan.textContent = seg.text;
+          phraseSpan.addEventListener('click', clickHandler);
+          const rt = document.createElement('rt');
+          rt.className = 'furigana-text';
+          rt.textContent = phraseTrans;
+          rubyEl.appendChild(phraseSpan);
+          rubyEl.appendChild(rt);
+          sWrap.appendChild(rubyEl);
+        } else {
+          // No furigana — plain highlighted span
+          const phraseSpan = document.createElement('span');
+          phraseSpan.className = `word-token lvl${lvl}`;
+          phraseSpan.style.borderRadius = '4px';
+          phraseSpan.style.cursor = 'pointer';
+          phraseSpan.textContent = seg.text;
+          phraseSpan.title = phraseTrans;
+          phraseSpan.addEventListener('click', clickHandler);
+          sWrap.appendChild(phraseSpan);
+        }
+        return;
+      }
+
+      // Plain text segment — tokenize word by word as before
+      const chunks = seg.text.split(/(\s+)/);
+      chunks.forEach(chunk => {
+        if (/^\s+$/.test(chunk)) { sWrap.appendChild(document.createTextNode(chunk)); return; }
+        if (!chunk) return;
+
+        const wordMatch = chunk.match(/^([^a-zA-ZÀ-ÿ]*)([a-zA-ZÀ-ÿ'-]*)([^a-zA-ZÀ-ÿ]*)$/);
+        const pre = wordMatch?.[1] || '';
+        const word = wordMatch?.[2] || '';
+        const post = wordMatch?.[3] || '';
+
+        if (pre) sWrap.appendChild(document.createTextNode(pre));
+
+        if (word) {
+          const cleanWord = word.toLowerCase().replace(/['-]$/, '');
+          const vocab = vocabMap[cleanWord];
+          const level = vocab?.level || 0;
+          const translation = vocab?.translation || '';
+
+          if (furiganaOn && translation && level > 0 && level < 5) {
+            const wrap = document.createElement('ruby');
+            wrap.className = 'furigana-wrap';
+
+            const wspan = document.createElement('span');
+            wspan.className = `furigana-word${level > 0 ? ' lvl' + level : ''}`;
+            wspan.textContent = word;
+            wspan.dataset.word = cleanWord;
+            wspan.dataset.raw = word;
+            wspan.addEventListener('click', handleWordClick);
+            wspan.addEventListener('contextmenu', handleContextMenu);
+
+            const rt = document.createElement('rt');
+            rt.className = 'furigana-text';
+            rt.textContent = translation;
+
+            wrap.appendChild(wspan);
+            wrap.appendChild(rt);
+            sWrap.appendChild(wrap);
+          } else {
+            const wspan = document.createElement('span');
+            wspan.className = `word-token${level > 0 ? ' lvl' + level : ''}`;
+            wspan.textContent = word;
+            wspan.dataset.word = cleanWord;
+            wspan.dataset.raw = word;
+            wspan.addEventListener('click', handleWordClick);
+            wspan.addEventListener('contextmenu', handleContextMenu);
+            sWrap.appendChild(wspan);
+          }
+        }
+
+        if (post) sWrap.appendChild(document.createTextNode(post));
+      });
+    });
+
+    sWrap.addEventListener('click', handleSentenceClick);
+    p.appendChild(sWrap);
+  });
+}
+
+// ── VOCAB LIST ──
+function setFilter(f) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c.dataset.filter === f));
+  renderVocabList();
+}
+
+async function renderVocabList() {
+  const items = Object.values(vocabMap);
+  const search = document.getElementById('vocabSearch')?.value.toLowerCase() || '';
+  const lvlNames = ['', 'New', 'Learning', 'Familiar', 'Known', 'Mastered'];
+  const badgeClass = ['', 'badge-1', 'badge-2', 'badge-3', 'badge-4', 'badge-5'];
+
+  let filtered = items.filter(v => {
+    if (search && !v.text.includes(search) && !(v.translation || '').toLowerCase().includes(search)) return false;
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'phrase') return v.type === 'phrase';
+    return v.level == activeFilter;
+  });
+
+  filtered.sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
+
+  const container = document.getElementById('vocabListContainer');
+  if (!filtered.length) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">📚</div><p>No items match.</p></div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(v => `
+    <div class="vocab-item" onclick="showVocabDetail('${v.text.replace(/'/g,"\\'")}')">
+      <div class="vi-word">${v.type === 'phrase' ? '"' + (v.sentence || v.text).substring(0, 40) + '…"' : (v.sentence ? v.text.charAt(0).toUpperCase() + v.text.slice(1) : v.text)}</div>
+      ${v.translation ? `<div class="vi-trans">${v.translation}</div>` : ''}
+      <div class="vi-meta">
+        <span class="level-badge ${badgeClass[v.level] || 'badge-1'}">${lvlNames[v.level] || 'New'}</span>
+        ${v.type === 'phrase' ? '<span class="type-badge">phrase</span>' : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function showVocabDetail(key) {
+  const vocab = vocabMap[key];
+  if (!vocab) return;
+  switchTab('detail');
+  if (vocab.type === 'phrase') {
+    showSentenceDetail(vocab.sentence || vocab.text);
+  } else {
+    showWordDetail(vocab.text, vocab.text, vocab.sentence || '');
+  }
+}
+
+// ── STATS ──
+function renderStats() {
+  const items = Object.values(vocabMap);
+  const counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  items.forEach(v => { counts[v.level] = (counts[v.level] || 0) + 1; });
+  const total = items.length;
+
+  const grid = document.getElementById('statsGrid');
+  grid.innerHTML = `
+    <div class="stat-card"><div class="val">${total}</div><div class="lbl">Total Words</div></div>
+    <div class="stat-card"><div class="val" style="color:var(--red)">${counts[1] || 0}</div><div class="lbl">New</div></div>
+    <div class="stat-card"><div class="val" style="color:var(--gold)">${(counts[2] || 0) + (counts[3] || 0)}</div><div class="lbl">Learning</div></div>
+    <div class="stat-card"><div class="val" style="color:var(--green)">${(counts[4] || 0) + (counts[5] || 0)}</div><div class="lbl">Known</div></div>
+  `;
+
+  const barColors = ['', 'var(--red)', 'var(--gold)', '#facc15', 'var(--green)', 'var(--text-dim)'];
+  const bar = document.getElementById('statsBar');
+  const legend = document.getElementById('statsLegend');
+  const labels = ['', 'New', 'Learning', 'Familiar', 'Known', 'Mastered'];
+  bar.innerHTML = '';
+  legend.innerHTML = '';
+
+  [1, 2, 3, 4, 5].forEach(lvl => {
+    const cnt = counts[lvl] || 0;
+    if (cnt === 0 || total === 0) return;
+    const pct = (cnt / total * 100).toFixed(1);
+    const seg = document.createElement('div');
+    seg.style.cssText = `flex:${cnt};background:${barColors[lvl]};border-radius:999px;opacity:0.8`;
+    bar.appendChild(seg);
+    legend.innerHTML += `<div style="display:flex;align-items:center;gap:4px;font-size:0.7rem;color:var(--text-muted)"><div style="width:8px;height:8px;border-radius:50%;background:${barColors[lvl]}"></div>${labels[lvl]}: ${cnt}</div>`;
+  });
+}
+
+// ── TABS ──
+function switchTab(tab) {
+  document.querySelectorAll('.stab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + tab));
+  document.querySelectorAll('.sidebar-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tab));
+  if (tab === 'vocab') renderVocabList();
+  if (tab === 'stats') renderStats();
+  if (tab === 'library') renderLibrary();
+}
+
+// ── SELECTION ──
+function clearSelection() {
+  selectedTokens.clear();
+  document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+}
+
+function updateSelectMode() {
+  selectMode = document.getElementById('selectMode').value;
+}
+
+function toggleShowAll() {
+  showingAll = !showingAll;
+  document.getElementById('showAllBtn').classList.toggle('active', showingAll);
+  document.getElementById('showAllBtn').textContent = showingAll ? 'Hide All Vocab' : 'Show All Vocab';
+  // Highlight all vocab words in text
+  document.querySelectorAll('.word-token, .furigana-word').forEach(el => {
+    const word = el.dataset.word;
+    if (showingAll && vocabMap[word]) {
+      el.style.opacity = '1';
+    } else {
+      el.style.opacity = '';
+    }
+  });
+}
+
+// ── SETTINGS ──
+let settingsOpen = false;
+function toggleSettings() {
+  settingsOpen = !settingsOpen;
+  document.getElementById('settingsPanel').classList.toggle('open', settingsOpen);
+  document.getElementById('settingsBtn').classList.toggle('active', settingsOpen);
+}
+
+// Close settings on outside click
+document.addEventListener('click', e => {
+  if (settingsOpen && !e.target.closest('#settingsPanel') && !e.target.closest('#settingsBtn')) {
+    settingsOpen = false;
+    document.getElementById('settingsPanel').classList.remove('open');
+    document.getElementById('settingsBtn').classList.remove('active');
+  }
+});
+
+function saveSettings() {
+  localStorage.setItem('lr_font', document.getElementById('fontSelect')?.value || "'Lora', serif");
+  localStorage.setItem('lr_size', document.getElementById('fontSizeSelect')?.value || '18');
+  localStorage.setItem('lr_lineHeight', document.getElementById('lineHeightSelect')?.value || '2.4');
+  localStorage.setItem('lr_width', document.getElementById('textWidthSelect')?.value || '720px');
+}
+
+function restoreSettings() {
+  const font     = localStorage.getItem('lr_font')       || "'Lora', serif";
+  const size     = localStorage.getItem('lr_size')       || '18';
+  const lh       = localStorage.getItem('lr_lineHeight') || '2.4';
+  const width    = localStorage.getItem('lr_width')      || '720px';
+
+  // Apply to DOM
+  const tc = document.getElementById('textContent');
+  tc.style.fontFamily  = font;
+  tc.style.fontSize    = size + 'px';
+  tc.style.lineHeight  = lh;
+  tc.style.maxWidth    = width;
+
+  // Sync selects
+  const fs = document.getElementById('fontSelect');
+  if (fs) fs.value = font;
+  const fss = document.getElementById('fontSizeSelect');
+  if (fss) fss.value = size;
+  const lhs = document.getElementById('lineHeightSelect');
+  if (lhs) lhs.value = lh;
+  const ws = document.getElementById('textWidthSelect');
+  if (ws) ws.value = width;
+
+  updateFontPreview();
+}
+
+function updateFontPreview() {
+  const preview = document.getElementById('fontPreview');
+  if (!preview) return;
+  const font = document.getElementById('fontSelect')?.value || "'Lora', serif";
+  const size = document.getElementById('fontSizeSelect')?.value || '18';
+  preview.style.fontFamily = font;
+  preview.style.fontSize = (parseInt(size) * 0.78) + 'px';
+}
+
+// ── FONT ──
+function setFont(v) {
+  document.getElementById('textContent').style.fontFamily = v;
+  updateFontPreview();
+  saveSettings();
+  syncTranslationFont();
+}
+
+// ── FONT SIZE ──
+function setFontSize(v) {
+  document.getElementById('textContent').style.fontSize = v + 'px';
+  updateFontPreview();
+  saveSettings();
+  syncTranslationFont();
+}
+
+// ── LINE HEIGHT ──
+function setLineHeight(v) {
+  document.getElementById('textContent').style.lineHeight = v;
+  saveSettings();
+  syncTranslationFont();
+}
+
+// ── TEXT WIDTH ──
+function setTextWidth(v) {
+  document.getElementById('textContent').style.maxWidth = v;
+  saveSettings();
+}
+
+// ── LIBRARY ──
+function openSaveLessonModal() {
+  if (!currentRawText) { alert('No text loaded yet.'); return; }
+  document.getElementById('saveLessonModal').classList.add('visible');
+  const input = document.getElementById('lessonTitleInput');
+  input.value = '';
+  setTimeout(() => input.focus(), 50);
+}
+
+function closeSaveLessonModal() {
+  document.getElementById('saveLessonModal').classList.remove('visible');
+}
+
+async function saveLesson() {
+  const title = document.getElementById('lessonTitleInput').value.trim();
+  if (!title) { document.getElementById('lessonTitleInput').focus(); return; }
+  // Also save the current translation column content if present
+  const transDisplayArea = document.getElementById('transDisplayArea');
+  const transTextDisplay = document.getElementById('transTextDisplay');
+  let translationText = '';
+  if (transDisplayArea && transDisplayArea.style.display !== 'none' && transTextDisplay) {
+    // Extract plain text from rendered HTML paragraphs
+    translationText = Array.from(transTextDisplay.querySelectorAll('p'))
+      .map(p => p.innerHTML.replace(/<br\s*\/?>/gi, '\n').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>'))
+      .join('\n\n');
+  }
+  const lesson = { title, text: currentRawText, translationText, savedAt: Date.now() };
+  await dbPutLesson(lesson);
+  closeSaveLessonModal();
+  renderLibrary();
+  // Flash feedback
+  const btn = document.querySelector('#panel-library .btn');
+  if (btn) { const orig = btn.textContent; btn.textContent = '✓ Saved!'; setTimeout(() => btn.textContent = orig, 1200); }
+}
+
+async function renderLibrary() {
+  const container = document.getElementById('libraryList');
+  const lessons = await dbGetAllLessons();
+  lessons.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+
+  if (!lessons.length) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">📖</div><p>No saved lessons yet.<br>Load a text and click "Save Current".</p></div>';
+    return;
+  }
+
+  container.innerHTML = lessons.map(l => `
+    <div class="vocab-item" style="position:relative;">
+      <div class="vi-word" style="font-size:0.9rem;margin-right:32px">${l.title}</div>
+      <div class="vi-trans">${l.text.substring(0, 60).trim()}…</div>
+      <div class="vi-meta" style="margin-top:6px">
+        <span class="level-badge badge-5">${new Date(l.savedAt).toLocaleDateString()}</span>
+        <span class="level-badge badge-4" style="cursor:pointer" onclick="loadLesson(${l.id})">📂 Open</span>
+        <span class="level-badge badge-1" style="cursor:pointer;margin-left:auto" onclick="deleteLesson(${l.id})">🗑</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function loadLesson(id) {
+  const lessons = await dbGetAllLessons();
+  const lesson = lessons.find(l => l.id === id);
+  if (!lesson) return;
+  renderText(lesson.text);
+  // Restore translation if saved with lesson
+  if (lesson.translationText && lesson.translationText.trim()) {
+    loadTranslationText(lesson.translationText);
+  } else {
+    // Clear any previous translation
+    clearTranslation();
+  }
+}
+
+async function deleteLesson(id) {
+  if (!confirm('Delete this lesson?')) return;
+  await dbDeleteLesson(id);
+  renderLibrary();
+}
+
+document.getElementById('saveLessonModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeSaveLessonModal();
+});
+
+// ── LOAD TEXT MODAL ──
+function openLoadModal() {
+  document.getElementById('loadModal').classList.add('visible');
+}
+function closeLoadModal() {
+  document.getElementById('loadModal').classList.remove('visible');
+}
+function loadText() {
+  const text = document.getElementById('inputTextArea').value.trim();
+  if (!text) return;
+  renderText(text);
+  closeLoadModal();
+}
+document.getElementById('loadModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeLoadModal();
+});
+
+// ── AUDIO ──
+const audioEl = document.getElementById('audioEl');
+let audioLoaded = false;
+let isDragging = false;
+
+function loadAudio(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  audioEl.src = url;
+  audioEl.load();
+  audioLoaded = true;
+
+  document.getElementById('playerTitle').textContent = file.name.replace(/\.[^.]+$/, '');
+  document.getElementById('playerSub').textContent = file.name;
+  document.getElementById('audioPlayer').classList.add('visible');
+  document.getElementById('audioFileName').textContent = file.name.replace(/\.[^.]+$/, '');
+  document.getElementById('audioInfo').style.display = 'block';
+  document.getElementById('audioUploadPrompt').style.display = 'none';
+
+  audioEl.onloadedmetadata = () => {
+    document.getElementById('durationLabel').textContent = formatTime(audioEl.duration);
+    document.getElementById('audioDuration').textContent = 'Duration: ' + formatTime(audioEl.duration);
+    document.getElementById('playerSub').textContent = formatTime(audioEl.duration);
+    renderBookmarks();
+  };
+}
+
+function togglePlay() {
+  if (!audioLoaded) return;
+  if (audioEl.paused) { audioEl.play(); document.getElementById('playBtn').textContent = '⏸'; }
+  else { audioEl.pause(); document.getElementById('playBtn').textContent = '▶'; }
+}
+
+function skipAudio(sec) {
+  if (!audioLoaded) return;
+  audioEl.currentTime = Math.max(0, Math.min(audioEl.duration, audioEl.currentTime + sec));
+}
+
+audioEl.addEventListener('timeupdate', () => {
+  if (!audioEl.duration) return;
+  const pct = audioEl.currentTime / audioEl.duration * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('timeLabel').textContent = formatTime(audioEl.currentTime);
+});
+
+audioEl.addEventListener('ended', () => {
+  document.getElementById('playBtn').textContent = '▶';
+});
+
+function seekAudio(e) {
+  if (!audioLoaded) return;
+  const rect = e.currentTarget.getBoundingClientRect();
+  const pct = (e.clientX - rect.left) / rect.width;
+  audioEl.currentTime = pct * audioEl.duration;
+}
+
+function previewSeek(e) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const pct = (e.clientX - rect.left) / rect.width;
+  const preview = document.getElementById('seekPreview');
+  preview.style.display = 'block';
+  preview.style.left = (e.clientX - rect.left) + 'px';
+  if (audioEl.duration) preview.textContent = formatTime(pct * audioEl.duration);
+}
+function hidePreview() { document.getElementById('seekPreview').style.display = 'none'; }
+
+function addBookmark() {
+  if (!audioLoaded) return;
+  const t = audioEl.currentTime;
+  bookmarks.push({ time: t, label: formatTime(t) });
+  bookmarks.sort((a, b) => a.time - b.time);
+  renderBookmarks();
+}
+
+function renderBookmarks() {
+  const row = document.getElementById('bookmarksList');
+  const markers = document.getElementById('bookmarkMarkers');
+  row.innerHTML = '';
+  markers.innerHTML = '';
+
+  if (!bookmarks.length) {
+    row.innerHTML = '<span class="bm-label">No bookmarks yet. Press 🔖 to add.</span>';
+    return;
+  }
+
+  bookmarks.forEach((bm, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'bm-chip';
+    chip.innerHTML = `🔖 ${bm.label} <span class="bm-del" onclick="removeBookmark(${i})">✕</span>`;
+    chip.addEventListener('click', e => {
+      if (e.target.classList.contains('bm-del')) return;
+      audioEl.currentTime = bm.time;
+    });
+    row.appendChild(chip);
+
+    // Marker on progress bar
+    if (audioEl.duration) {
+      const pct = bm.time / audioEl.duration * 100;
+      const m = document.createElement('div');
+      m.className = 'bm-marker';
+      m.style.left = pct + '%';
+      m.title = bm.label;
+      m.onclick = () => audioEl.currentTime = bm.time;
+      markers.appendChild(m);
+    }
+  });
+}
+
+function removeBookmark(i) {
+  bookmarks.splice(i, 1);
+  renderBookmarks();
+}
+
+function setPlaybackRate() {
+  rateIdx = (rateIdx + 1) % playbackRates.length;
+  const rate = playbackRates[rateIdx];
+  audioEl.playbackRate = rate;
+  document.getElementById('speedBtn').textContent = rate.toFixed(1) + '×';
+}
+
+function formatTime(s) {
+  if (!isFinite(s)) return '0:00';
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return m + ':' + String(sec).padStart(2, '0');
+}
+
+// ── START ──
+init();
+</script>
+</body>
+</html>
